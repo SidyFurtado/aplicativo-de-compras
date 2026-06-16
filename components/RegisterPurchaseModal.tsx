@@ -31,7 +31,7 @@ export default function RegisterPurchaseModal({ visible, onClose, onSave, estima
   }, [estimatedTotal, visible]);
 
   const parsedTotal = Number(total.replace(',', '.'));
-  const canSave = Number.isFinite(parsedTotal) && parsedTotal > 0 && !saving;
+  const canSave = Number.isFinite(parsedTotal) && parsedTotal > 0 && parsedTotal <= 99999 && !saving;
 
   const submit = async () => {
     if (!canSave) return;
@@ -67,6 +67,7 @@ export default function RegisterPurchaseModal({ visible, onClose, onSave, estima
             placeholderTextColor={COLORS.textMuted}
             multiline
             style={[styles.input, styles.noteInput]}
+            maxLength={500}
           />
 
           <TouchableOpacity

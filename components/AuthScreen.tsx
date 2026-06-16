@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -22,24 +22,29 @@ import {
 import { auth, authPersistenceReady, googleProvider, isFirebaseConfigured } from '../lib/firebase';
 import { COLORS, RADII, SHADOWS } from '../constants/theme';
 
-function googleAuthErrorMessage(error: any) {
-  const code = error?.code;
-  const message = error?.message;
+const COOLDOWN_SECONDS = 30;
+
+function friendlyAuthError(error: any): string {
+  const code = error?.code || '';
   const hostname = typeof window !== 'undefined' ? window.location.hostname : 'sidyfurtado.github.io';
 
-  if (code === 'auth/unauthorized-domain') {
-    return `Adicione ${hostname} em Firebase Console > Authentication > Settings > Authorized domains.`;
-  }
+  const messages: Record<string, string> = {
+    'auth/invalid-credential':       'E-mail ou senha incorretos. Verifique os dados e tente novamente.',
+    'auth/wrong-password':           'Senha incorreta. Verifique e tente novamente.',
+    'auth/user-not-found':           'E-mail ou senha incorretos. Verifique os dados e tente novamente.',
+    'auth/invalid-email':            'O e-mail informado não é válido.',
+    'auth/email-already-in-use':     'Este e-mail já está cadastrado. Tente entrar com ele.',
+    'auth/weak-password':            'Escolha uma senha mais forte (mínimo 6 caracteres).',
+    'auth/too-many-requests':        'Muitas tentativas. Aguarde alguns minutos e tente novamente.',
+    'auth/network-request-failed':   'Sem conexão. Verifique sua internet e tente novamente.',
+    'auth/popup-blocked':            'O navegador bloqueou a janela de login. Tente em Chrome ou Safari.',
+    'auth/popup-closed-by-user':     'A janela de login foi fechada antes de concluir.',
+    'auth/unauthorized-domain':      `Domínio não autorizado. Adicione "${hostname}" no Firebase Console → Authentication → Authorized domains.`,
+    'auth/cancelled-popup-request':  'Outra janela de login ainda está aberta. Feche-a e tente novamente.',
+    'auth/operation-not-allowed':    'Este método de login não está ativado. Entre em contato com o suporte.',
+  };
 
-  if (code === 'auth/popup-blocked') {
-    return 'O navegador bloqueou a janela do Google. Abra o site direto no Safari/Chrome e toque no botão de novo.';
-  }
-
-  if (code === 'auth/popup-closed-by-user') {
-    return 'A janela do Google foi fechada antes do login terminar.';
-  }
-
-  return code ? `${code}: ${message}` : message || 'Tente novamente em alguns segundos.';
+  return messages[code] || 'Ocorreu um erro inesperado. Tente novamente em alguns segundos.';
 }
 
 export default function AuthScreen() {
@@ -51,22 +56,36 @@ export default function AuthScreen() {
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
+  const [cooldownLeft, setCooldownLeft] = useState(0);
+  const cooldownTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const startCooldown = () => {
+    setCooldownLeft(COOLDOWN_SECONDS);
+    if (cooldownTimer.current) clearInterval(cooldownTimer.current);
+    cooldownTimer.current = setInterval(() => {
+      setCooldownLeft((prev) => {
+        if (prev <= 1) {
+          clearInterval(cooldownTimer.current!);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  };
 
   const submit = async () => {
+    if (cooldownLeft > 0) return;
     const cleanEmail = email.trim().toLowerCase();
     setAuthError(null);
 
     if (!isFirebaseConfigured) {
-      const message = 'Cole o firebaseConfig no arquivo .env e reinicie o servidor.';
-      setAuthError(message);
-      Alert.alert('Firebase não configurado', message);
+      const msg = 'Configure o arquivo .env com os dados do Firebase e reinicie o servidor.';
+      setAuthError(msg);
       return;
     }
 
     if (!cleanEmail || password.length < 6) {
-      const message = 'Informe um e-mail válido e uma senha com pelo menos 6 caracteres.';
-      setAuthError(message);
-      Alert.alert('Dados incompletos', message);
+      setAuthError('Informe um e-mail válido e uma senha com pelo menos 6 caracteres.');
       return;
     }
 
@@ -80,21 +99,20 @@ export default function AuthScreen() {
         await createUserWithEmailAndPassword(auth, cleanEmail, password);
       }
     } catch (error: any) {
-      const message = error.message || 'Tente novamente em alguns segundos.';
+      const message = friendlyAuthError(error);
       setAuthError(message);
-      Alert.alert('Acesso não concluído', message);
+      startCooldown();
     } finally {
       setLoading(false);
     }
   };
 
   const signInWithGoogle = async () => {
+    if (cooldownLeft > 0) return;
     setAuthError(null);
 
     if (!isFirebaseConfigured) {
-      const message = 'Cole o firebaseConfig no arquivo .env e reinicie o servidor.';
-      setAuthError(message);
-      Alert.alert('Firebase não configurado', message);
+      setAuthError('Configure o arquivo .env com os dados do Firebase e reinicie o servidor.');
       return;
     }
 
@@ -109,9 +127,9 @@ export default function AuthScreen() {
       await setPersistence(auth, browserLocalPersistence);
       await signInWithPopup(auth, googleProvider);
     } catch (error: any) {
-      const message = googleAuthErrorMessage(error);
+      const message = friendlyAuthError(error);
       setAuthError(message);
-      Alert.alert('Google não concluiu o login', message);
+      startCooldown();
     } finally {
       setGoogleLoading(false);
     }
@@ -172,9 +190,9 @@ export default function AuthScreen() {
 
           <View style={styles.form}>
             <TouchableOpacity
-              style={[styles.googleButton, !isFirebaseConfigured && styles.buttonDisabled]}
+              style={[styles.googleButton, (!isFirebaseConfigured || cooldownLeft > 0) && styles.buttonDisabled]}
               onPress={signInWithGoogle}
-              disabled={googleLoading || !isFirebaseConfigured}
+              disabled={googleLoading || !isFirebaseConfigured || cooldownLeft > 0}
             >
               {googleLoading ? (
                 <ActivityIndicator color={AUTH_COLORS.text} />
@@ -231,9 +249,15 @@ export default function AuthScreen() {
               />
             </View>
 
-            <TouchableOpacity style={styles.primaryButton} onPress={submit} disabled={loading}>
+            <TouchableOpacity
+              style={[styles.primaryButton, (loading || cooldownLeft > 0) && styles.buttonDisabled]}
+              onPress={submit}
+              disabled={loading || cooldownLeft > 0}
+            >
               {loading ? (
                 <ActivityIndicator color="#062018" />
+              ) : cooldownLeft > 0 ? (
+                <Text style={styles.primaryText}>Aguarde {cooldownLeft}s...</Text>
               ) : (
                 <Text style={styles.primaryText}>{mode === 'signIn' ? 'Entrar' : 'Criar conta'}</Text>
               )}

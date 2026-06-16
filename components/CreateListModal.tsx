@@ -54,6 +54,7 @@ export default function CreateListModal({ visible, onClose, onCreate }: Props) {
             placeholder="Nome da lista"
             placeholderTextColor={COLORS.textMuted}
             style={styles.input}
+            maxLength={80}
           />
 
           <View style={styles.categoryGrid}>

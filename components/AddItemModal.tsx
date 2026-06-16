@@ -129,6 +129,7 @@ export default function AddItemModal({ visible, onClose, onSave, editItem }: Pro
               placeholder="Item"
               placeholderTextColor={COLORS.textMuted}
               style={styles.input}
+              maxLength={120}
             />
 
             <View style={styles.inline}>
@@ -223,6 +224,7 @@ export default function AddItemModal({ visible, onClose, onSave, editItem }: Pro
               placeholderTextColor={COLORS.textMuted}
               style={[styles.input, styles.noteInput]}
               multiline
+              maxLength={500}
             />
           </ScrollView>
 
