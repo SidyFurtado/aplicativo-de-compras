@@ -1,0 +1,65 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function ownsList(listId) {
+      return signedIn()
+        && exists(/databases/$(database)/documents/lists/$(listId))
+        && get(/databases/$(database)/documents/lists/$(listId)).data.created_by == request.auth.uid;
+    }
+
+    match /lists/{listId} {
+      allow create: if signedIn()
+        && request.resource.data.created_by == request.auth.uid;
+
+      allow read, delete: if signedIn()
+        && resource.data.created_by == request.auth.uid;
+
+      allow update: if signedIn()
+        && resource.data.created_by == request.auth.uid
+        && request.resource.data.created_by == request.auth.uid;
+    }
+
+    match /items/{itemId} {
+      allow create: if signedIn()
+        && request.resource.data.created_by == request.auth.uid
+        && ownsList(request.resource.data.list_id);
+
+      allow read, delete: if ownsList(resource.data.list_id);
+
+      allow update: if ownsList(resource.data.list_id)
+        && ownsList(request.resource.data.list_id);
+    }
+
+    match /purchases/{purchaseId} {
+      allow create: if signedIn()
+        && request.resource.data.created_by == request.auth.uid
+        && ownsList(request.resource.data.list_id);
+
+      allow read, delete: if ownsList(resource.data.list_id);
+
+      allow update: if ownsList(resource.data.list_id)
+        && ownsList(request.resource.data.list_id);
+    }
+
+    match /budgets/{budgetId} {
+      allow create: if signedIn()
+        && request.resource.data.created_by == request.auth.uid;
+
+      allow read, delete: if signedIn()
+        && resource.data.created_by == request.auth.uid;
+
+      allow update: if signedIn()
+        && resource.data.created_by == request.auth.uid
+        && request.resource.data.created_by == request.auth.uid;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

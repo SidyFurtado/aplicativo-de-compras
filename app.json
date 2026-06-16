@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "05_APLICATIVO_DE_COMPRAS",
-    "slug": "05_APLICATIVO_DE_COMPRAS",
+    "name": "Casa Certa",
+    "slug": "casa-certa",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "05aplicativodecompras",
+    "scheme": "casacerta",
     "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true
@@ -21,7 +21,7 @@
     },
     "web": {
       "bundler": "metro",
-      "output": "static",
+      "output": "single",
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
@@ -31,12 +31,13 @@
         {
           "image": "./assets/images/splash-icon.png",
           "resizeMode": "contain",
-          "backgroundColor": "#ffffff"
+          "backgroundColor": "#05070D"
         }
       ]
     ],
     "experiments": {
-      "typedRoutes": true
+      "typedRoutes": true,
+      "baseUrl": "/aplicativo-de-compras"
     }
   }
 }

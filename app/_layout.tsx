@@ -1,56 +1,67 @@
-import { useFonts } from 'expo-font';
-import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
+import { useEffect, useState } from 'react';
+import { Stack } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
+import { View, Text, StyleSheet } from 'react-native';
 import * as SplashScreen from 'expo-splash-screen';
-import { useEffect } from 'react';
-import 'react-native-reanimated';
+import { onAuthStateChanged, User } from 'firebase/auth';
+import { auth, authPersistenceReady } from '../lib/firebase';
+import { COLORS } from '../constants/theme';
+import AuthScreen from '../components/AuthScreen';
 
-import { useColorScheme } from '@/components/useColorScheme';
-
-export {
-  // Catch any errors thrown by the Layout component.
-  ErrorBoundary,
-} from 'expo-router';
-
-export const unstable_settings = {
-  // Ensure that reloading on `/modal` keeps a back button present.
-  initialRouteName: '(tabs)',
-};
-
-// Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
-  const [loaded, error] = useFonts({
-    SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
-  });
-
-  // Expo Router uses Error Boundaries to catch errors in the navigation tree.
-  useEffect(() => {
-    if (error) throw error;
-  }, [error]);
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (loaded) {
-      SplashScreen.hideAsync();
-    }
-  }, [loaded]);
+    let unsubscribe: (() => void) | undefined;
+    let disposed = false;
 
-  if (!loaded) {
-    return null;
+    authPersistenceReady.finally(() => {
+      if (disposed) return;
+      unsubscribe = onAuthStateChanged(auth, (nextUser) => {
+        setUser(nextUser);
+        setLoading(false);
+        SplashScreen.hideAsync();
+      });
+    });
+
+    return () => {
+      disposed = true;
+      unsubscribe?.();
+    };
+  }, []);
+
+  if (loading) {
+    return (
+      <View style={styles.loading}>
+        <Text style={styles.loadingText}>🛒</Text>
+      </View>
+    );
   }
 
-  return <RootLayoutNav />;
-}
-
-function RootLayoutNav() {
-  const colorScheme = useColorScheme();
+  if (!user) {
+    return <AuthScreen />;
+  }
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
+    <>
+      <StatusBar style="light" />
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="list/[id]" options={{ presentation: 'card', headerShown: false }} />
       </Stack>
-    </ThemeProvider>
+    </>
   );
 }
+
+const styles = StyleSheet.create({
+  loading: {
+    flex: 1,
+    backgroundColor: COLORS.background,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: { fontSize: 48 },
+});

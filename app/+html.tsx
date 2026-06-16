@@ -12,6 +12,12 @@ export default function Root({ children }: { children: ReactNode }) {
         <meta charSet="utf-8" />
         <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
         <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+        <title>Casa Certa</title>
+        <meta name="application-name" content="Casa Certa" />
+        <meta name="apple-mobile-web-app-title" content="Casa Certa" />
+        <meta name="theme-color" content="#05070D" />
+        <link rel="icon" type="image/png" sizes="48x48" href="/aplicativo-de-compras/favicon.ico?v=casa-certa-2" />
+        <link rel="shortcut icon" href="/aplicativo-de-compras/favicon.ico?v=casa-certa-2" />
 
         {/*
           Disable body scrolling on web. This makes ScrollView components work closer to how they do on native.
