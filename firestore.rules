@@ -18,81 +18,13 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/lists/$(listId)).data.created_by == request.auth.uid;
     }
 
-    // ─── field-level validators ──────────────────────────────────
-
-    function validList(data) {
-      let allowedKeys = ['name', 'category', 'created_by', 'created_at', 'is_archived'];
-      let validCategory = data.category in ['feira', 'mercado', 'casa', 'farmacia', 'outros'];
-      return data.keys().hasOnly(allowedKeys)
-        && data.name is string
-        && data.name.size() >= 1
-        && data.name.size() <= 80
-        && data.category is string
-        && validCategory
-        && data.created_by is string
-        && data.is_archived is bool;
-    }
-
-    function validItem(data) {
-      let allowedKeys = ['list_id', 'created_by', 'name', 'quantity', 'unit',
-                         'priority', 'item_category', 'estimated_price', 'real_price',
-                         'is_checked', 'created_at', 'checked_at', 'note'];
-      let validPriority = data.priority in ['urgent', 'normal', 'low'];
-      let validUnit = data.unit in ['un', 'kg', 'g', 'L', 'ml', 'cx', 'pct', 'dz', 'par'];
-      return data.keys().hasOnly(allowedKeys)
-        && data.list_id is string
-        && data.created_by is string
-        && data.name is string
-        && data.name.size() >= 1
-        && data.name.size() <= 120
-        && (data.quantity is int || data.quantity is float)
-        && data.quantity >= 0
-        && data.quantity <= 9999
-        && data.unit is string
-        && validUnit
-        && data.priority is string
-        && validPriority
-        && data.is_checked is bool
-        && (data.note == null || (data.note is string && data.note.size() <= 500))
-        && (data.estimated_price == null || ((data.estimated_price is int || data.estimated_price is float) && data.estimated_price >= 0 && data.estimated_price <= 99999))
-        && (data.real_price == null || ((data.real_price is int || data.real_price is float) && data.real_price >= 0 && data.real_price <= 99999));
-    }
-
-    function validPurchase(data) {
-      let allowedKeys = ['list_id', 'created_by', 'total_spent', 'date', 'notes', 'created_at'];
-      return data.keys().hasOnly(allowedKeys)
-        && data.list_id is string
-        && data.created_by is string
-        && (data.total_spent is int || data.total_spent is float)
-        && data.total_spent >= 0
-        && data.total_spent <= 999999
-        && data.date is string
-        && data.date.size() == 10
-        && (data.notes == null || (data.notes is string && data.notes.size() <= 500));
-    }
-
-    function validBudget(data) {
-      let allowedKeys = ['category', 'created_by', 'month', 'year', 'amount'];
-      let validCategory = data.category in ['feira', 'mercado', 'casa', 'farmacia', 'outros'];
-      return data.keys().hasOnly(allowedKeys)
-        && data.category is string
-        && validCategory
-        && data.created_by is string
-        && (data.month is int || data.month is float)
-        && data.month >= 1
-        && data.month <= 12
-        && (data.year is int || data.year is float)
-        && data.year >= 2020
-        && data.year <= 2100
-        && (data.amount is int || data.amount is float)
-        && data.amount >= 0
-        && data.amount <= 999999;
-    }
-
     // ─── /lists ─────────────────────────────────────────────────
     match /lists/{listId} {
       allow create: if isOwner(request.resource.data.created_by)
-        && validList(request.resource.data);
+        && request.resource.data.name is string
+        && request.resource.data.name.size() >= 1
+        && request.resource.data.name.size() <= 80
+        && request.resource.data.is_archived is bool;
 
       allow read, delete: if signedIn()
         && resource.data.created_by == request.auth.uid;
@@ -100,50 +32,51 @@ service cloud.firestore {
       allow update: if signedIn()
         && resource.data.created_by == request.auth.uid
         && request.resource.data.created_by == request.auth.uid
-        && validList(request.resource.data);
+        && request.resource.data.name is string
+        && request.resource.data.name.size() >= 1;
     }
 
     // ─── /items ─────────────────────────────────────────────────
     match /items/{itemId} {
       allow create: if isOwner(request.resource.data.created_by)
         && ownsList(request.resource.data.list_id)
-        && validItem(request.resource.data);
+        && request.resource.data.name is string
+        && request.resource.data.name.size() >= 1
+        && request.resource.data.name.size() <= 120
+        && request.resource.data.is_checked is bool;
 
       allow read, delete: if ownsList(resource.data.list_id);
 
       allow update: if ownsList(resource.data.list_id)
         && ownsList(request.resource.data.list_id)
-        // created_by não pode ser alterado
         && request.resource.data.created_by == resource.data.created_by
-        && validItem(request.resource.data);
+        && request.resource.data.name is string
+        && request.resource.data.name.size() >= 1
+        && request.resource.data.is_checked is bool;
     }
 
     // ─── /purchases ─────────────────────────────────────────────
     match /purchases/{purchaseId} {
       allow create: if isOwner(request.resource.data.created_by)
-        && ownsList(request.resource.data.list_id)
-        && validPurchase(request.resource.data);
+        && ownsList(request.resource.data.list_id);
 
       allow read, delete: if ownsList(resource.data.list_id);
 
       allow update: if ownsList(resource.data.list_id)
         && ownsList(request.resource.data.list_id)
-        && request.resource.data.created_by == resource.data.created_by
-        && validPurchase(request.resource.data);
+        && request.resource.data.created_by == resource.data.created_by;
     }
 
     // ─── /budgets ───────────────────────────────────────────────
     match /budgets/{budgetId} {
-      allow create: if isOwner(request.resource.data.created_by)
-        && validBudget(request.resource.data);
+      allow create: if isOwner(request.resource.data.created_by);
 
       allow read, delete: if signedIn()
         && resource.data.created_by == request.auth.uid;
 
       allow update: if signedIn()
         && resource.data.created_by == request.auth.uid
-        && request.resource.data.created_by == request.auth.uid
-        && validBudget(request.resource.data);
+        && request.resource.data.created_by == request.auth.uid;
     }
 
     // ─── bloqueio total de tudo que não foi explicitado ─────────
