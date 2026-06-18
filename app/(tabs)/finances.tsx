@@ -134,7 +134,7 @@ export default function FinancesScreen() {
         </View>
 
         {/* Comparison */}
-        {lastMonthTotal > 0 && (
+        {lastMonthTotal > 0 && currentMonthTotal !== lastMonthTotal && (
           <View style={styles.comparisonCard}>
             {currentMonthTotal < lastMonthTotal ? (
               <>
@@ -489,6 +489,7 @@ const styles = StyleSheet.create({
     padding: 12,
     borderWidth: 1,
     borderColor: COLORS.border,
+    width: '100%',
   },
   purchaseIcon: {
     width: 36,

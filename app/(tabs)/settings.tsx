@@ -1,15 +1,17 @@
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  Alert, Platform
+  Platform
 } from 'react-native';
 import { signOut } from 'firebase/auth';
 import { auth, isFirebaseConfigured } from '../../lib/firebase';
 import { COLORS, RADII, SHADOWS } from '../../constants/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { useState, useEffect } from 'react';
+import DeleteConfirmModal from '../../components/DeleteConfirmModal';
 
 export default function SettingsScreen() {
   const [user, setUser] = useState(auth.currentUser);
+  const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(setUser);
@@ -17,10 +19,7 @@ export default function SettingsScreen() {
   }, []);
 
   const handleSignOut = () => {
-    Alert.alert('Sair', 'Deseja realmente sair da conta?', [
-      { text: 'Cancelar', style: 'cancel' },
-      { text: 'Sair', style: 'destructive', onPress: () => signOut(auth) },
-    ]);
+    setShowSignOutConfirm(true);
   };
 
   const SettingItem = ({
@@ -88,6 +87,15 @@ export default function SettingsScreen() {
 
         <View style={{ height: 100 }} />
       </ScrollView>
+
+      <DeleteConfirmModal
+        visible={showSignOutConfirm}
+        title="Sair da conta"
+        message="Deseja realmente sair? Você precisará fazer login novamente."
+        confirmLabel="Sair"
+        onClose={() => setShowSignOutConfirm(false)}
+        onConfirm={() => signOut(auth)}
+      />
     </View>
   );
 }

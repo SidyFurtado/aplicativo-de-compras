@@ -1,4 +1,5 @@
 // Design tokens e constantes do app
+import { Platform } from 'react-native';
 
 export const COLORS = {
   // Fundo principal
@@ -65,20 +66,24 @@ export const RADII = {
 } as const;
 
 export const SHADOWS = {
-  card: {
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 18 },
-    shadowOpacity: 0.24,
-    shadowRadius: 34,
-    elevation: 10,
-  },
-  glow: {
-    shadowColor: COLORS.primary,
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.25,
-    shadowRadius: 22,
-    elevation: 8,
-  },
+  card: Platform.OS === 'web'
+    ? { boxShadow: '0 18px 34px rgba(0,0,0,0.24)' }
+    : {
+        shadowColor: '#000000',
+        shadowOffset: { width: 0, height: 18 },
+        shadowOpacity: 0.24,
+        shadowRadius: 34,
+        elevation: 10,
+      },
+  glow: Platform.OS === 'web'
+    ? { boxShadow: `0 12px 22px ${COLORS.primary}40` }
+    : {
+        shadowColor: COLORS.primary,
+        shadowOffset: { width: 0, height: 12 },
+        shadowOpacity: 0.25,
+        shadowRadius: 22,
+        elevation: 8,
+      },
 } as const;
 
 export const CATEGORY_META = {
