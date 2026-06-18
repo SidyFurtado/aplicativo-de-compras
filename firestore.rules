@@ -45,7 +45,7 @@ service cloud.firestore {
         && data.name is string
         && data.name.size() >= 1
         && data.name.size() <= 120
-        && data.quantity is number
+        && (data.quantity is int || data.quantity is float)
         && data.quantity >= 0
         && data.quantity <= 9999
         && data.unit is string
@@ -54,8 +54,8 @@ service cloud.firestore {
         && validPriority
         && data.is_checked is bool
         && (data.note == null || (data.note is string && data.note.size() <= 500))
-        && (data.estimated_price == null || (data.estimated_price is number && data.estimated_price >= 0 && data.estimated_price <= 99999))
-        && (data.real_price == null || (data.real_price is number && data.real_price >= 0 && data.real_price <= 99999));
+        && (data.estimated_price == null || ((data.estimated_price is int || data.estimated_price is float) && data.estimated_price >= 0 && data.estimated_price <= 99999))
+        && (data.real_price == null || ((data.real_price is int || data.real_price is float) && data.real_price >= 0 && data.real_price <= 99999));
     }
 
     function validPurchase(data) {
@@ -63,7 +63,7 @@ service cloud.firestore {
       return data.keys().hasOnly(allowedKeys)
         && data.list_id is string
         && data.created_by is string
-        && data.total_spent is number
+        && (data.total_spent is int || data.total_spent is float)
         && data.total_spent >= 0
         && data.total_spent <= 999999
         && data.date is string
@@ -78,13 +78,13 @@ service cloud.firestore {
         && data.category is string
         && validCategory
         && data.created_by is string
-        && data.month is number
+        && (data.month is int || data.month is float)
         && data.month >= 1
         && data.month <= 12
-        && data.year is number
+        && (data.year is int || data.year is float)
         && data.year >= 2020
         && data.year <= 2100
-        && data.amount is number
+        && (data.amount is int || data.amount is float)
         && data.amount >= 0
         && data.amount <= 999999;
     }
