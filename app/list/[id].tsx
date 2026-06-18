@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  Platform, Alert
+  Platform,
 } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { useState } from 'react';
@@ -11,6 +11,7 @@ import { COLORS, ITEM_CATEGORY_META, ItemCategory, PRIORITY_META, Priority, RADI
 import AddItemModal from '../../components/AddItemModal';
 import RegisterPurchaseModal from '../../components/RegisterPurchaseModal';
 import ConfirmItemModal from '../../components/ConfirmItemModal';
+import DeleteConfirmModal from '../../components/DeleteConfirmModal';
 
 type StatusFilter = 'all' | 'open' | 'checked';
 type PriorityFilter = 'all' | Priority;
@@ -75,12 +76,12 @@ function CategorySection({
 function ItemRow({
   item,
   onToggle,
-  onDelete,
+  onDeleteConfirm,
   onEdit,
 }: {
   item: any;
   onToggle: () => void;
-  onDelete: () => void;
+  onDeleteConfirm: () => void;
   onEdit: () => void;
 }) {
   const priority = PRIORITY_META[item.priority as Priority];
@@ -160,14 +161,7 @@ function ItemRow({
           <Ionicons name="create-outline" size={18} color={COLORS.textSecondary} />
         </TouchableOpacity>
         <TouchableOpacity
-          onPress={() => Alert.alert(
-            'Apagar item',
-            `Deseja apagar "${item.name}"?`,
-            [
-              { text: 'Cancelar', style: 'cancel' },
-              { text: 'Apagar', style: 'destructive', onPress: onDelete },
-            ]
-          )}
+          onPress={onDeleteConfirm}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           style={[styles.actionButton, styles.deleteButton]}
           accessibilityLabel={`Apagar ${item.name}`}
@@ -187,6 +181,7 @@ export default function ListDetailScreen() {
   const [showPurchase, setShowPurchase] = useState(false);
   const [editItem, setEditItem] = useState<Item | null>(null);
   const [pendingCheckItem, setPendingCheckItem] = useState<Item | null>(null);
+  const [pendingDeleteItem, setPendingDeleteItem] = useState<Item | null>(null);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [priorityFilter, setPriorityFilter] = useState<PriorityFilter>('all');
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>('all');
@@ -466,7 +461,7 @@ export default function ListDetailScreen() {
                 key={item.id}
                 item={item}
                 onToggle={() => setPendingCheckItem(item)}
-                onDelete={() => deleteItem(item.id)}
+                onDeleteConfirm={() => setPendingDeleteItem(item)}
                 onEdit={() => setEditItem(item)}
               />
             )}
@@ -492,7 +487,7 @@ export default function ListDetailScreen() {
                     key={item.id}
                     item={item}
                     onToggle={() => toggleItem(item.id, false)}
-                    onDelete={() => deleteItem(item.id)}
+                    onDeleteConfirm={() => setPendingDeleteItem(item)}
                     onEdit={() => setEditItem(item)}
                   />
                 )}
@@ -543,6 +538,16 @@ export default function ListDetailScreen() {
           }
         }}
         item={pendingCheckItem}
+      />
+
+      <DeleteConfirmModal
+        visible={!!pendingDeleteItem}
+        title="Apagar item"
+        message={`Deseja apagar "${pendingDeleteItem?.name}"? Esta ação não pode ser desfeita.`}
+        onClose={() => setPendingDeleteItem(null)}
+        onConfirm={() => {
+          if (pendingDeleteItem) deleteItem(pendingDeleteItem.id);
+        }}
       />
 
       <RegisterPurchaseModal

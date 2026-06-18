@@ -1,6 +1,6 @@
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  RefreshControl, StatusBar, Platform, Alert
+  RefreshControl, StatusBar, Platform,
 } from 'react-native';
 import { useState } from 'react';
 import { router } from 'expo-router';
@@ -8,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useLists, List } from '../../lib/hooks';
 import { COLORS, CATEGORY_META, Category, RADII, SHADOWS } from '../../constants/theme';
 import CreateListModal from '../../components/CreateListModal';
+import DeleteConfirmModal from '../../components/DeleteConfirmModal';
 
 const CATEGORY_FILTERS: { key: 'all' | Category; label: string }[] = [
   { key: 'all', label: 'Todas' },
@@ -18,7 +19,7 @@ const CATEGORY_FILTERS: { key: 'all' | Category; label: string }[] = [
   { key: 'outros', label: 'Outros' },
 ];
 
-function ListCard({ list, onDelete }: { list: List; onDelete: (id: string) => void }) {
+function ListCard({ list, onDeleteConfirm }: { list: List; onDeleteConfirm: (list: List) => void }) {
   const cat = CATEGORY_META[list.category];
   const total = list.item_count || 0;
   const checked = list.checked_count || 0;
@@ -36,14 +37,7 @@ function ListCard({ list, onDelete }: { list: List; onDelete: (id: string) => vo
           <Text style={[styles.categoryLabel, { color: cat.color }]}>{cat.label}</Text>
         </View>
         <TouchableOpacity
-          onPress={() => Alert.alert(
-            'Apagar lista',
-            `Deseja apagar "${list.name}"?`,
-            [
-              { text: 'Cancelar', style: 'cancel' },
-              { text: 'Apagar', style: 'destructive', onPress: () => onDelete(list.id) },
-            ]
-          )}
+          onPress={() => onDeleteConfirm(list)}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           style={styles.cardAction}
         >
@@ -71,6 +65,7 @@ export default function ListsScreen() {
   const { lists, loading, refetch, createList, deleteList } = useLists();
   const [filter, setFilter] = useState<'all' | Category>('all');
   const [showCreate, setShowCreate] = useState(false);
+  const [pendingDeleteList, setPendingDeleteList] = useState<List | null>(null);
 
   const filtered = filter === 'all' ? lists : lists.filter(l => l.category === filter);
   const totalItems = lists.reduce((sum, list) => sum + (list.item_count || 0), 0);
@@ -182,7 +177,7 @@ export default function ListsScreen() {
                 <ListCard
                   key={list.id}
                   list={list}
-                  onDelete={deleteList}
+                  onDeleteConfirm={(l) => setPendingDeleteList(l)}
                 />
               ))}
             </View>
@@ -194,6 +189,16 @@ export default function ListsScreen() {
         visible={showCreate}
         onClose={() => setShowCreate(false)}
         onCreate={handleCreate}
+      />
+
+      <DeleteConfirmModal
+        visible={!!pendingDeleteList}
+        title="Apagar lista"
+        message={`Deseja apagar "${pendingDeleteList?.name}"? Todos os itens da lista serão apagados.`}
+        onClose={() => setPendingDeleteList(null)}
+        onConfirm={() => {
+          if (pendingDeleteList) deleteList(pendingDeleteList.id);
+        }}
       />
     </View>
   );
